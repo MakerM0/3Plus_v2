@@ -336,12 +336,12 @@ void board_init()
 
     delay(1000);
 
-    for (uint8_t i = 0; i < 110; i++)
+    for (uint8_t i = 0; i < OLED_HEIGHT; i++)
     {
-        gfx1->drawFastHLine(0, i, 96, BLACK);
-        gfx2->drawFastHLine(0, i, 96, BLACK);
-        gfx3->drawFastHLine(0, i, 96, BLACK);
-        delay(10);
+        gfx1->drawFastHLine(0, i, OLED_WIDTH, BLACK);
+        gfx2->drawFastHLine(0, i, OLED_WIDTH, BLACK);
+        gfx3->drawFastHLine(0, i, OLED_WIDTH, BLACK);
+        delay(5);
     }
 
     gfx1->setTextColor(GREEN);
@@ -487,6 +487,7 @@ void board_init()
     }
 
     // WiFi.mode(WIFI_OFF);
+    WiFi.setSleep(true);
 
     bleKeyboard.begin();
 }

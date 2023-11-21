@@ -187,7 +187,7 @@ static void key_timer_callback(TimerHandle_t xTimerID)
     button3.loop();
     button4.loop();
 
-    long newPosition = myEnc.read() / 4;
+    long newPosition = myEnc.read() / 2;
     if (newPosition != oldPosition)
     {
         if (newPosition < oldPosition)
@@ -229,10 +229,10 @@ static void long_timer_callback(TimerHandle_t xTimerID)
 void app_key_init(void)
 {
 
-    button1.begin(BUTTON1_PIN);
-    button2.begin(BUTTON2_PIN);
-    button3.begin(BUTTON3_PIN);
-    button4.begin(BUTTON4_PIN);
+    button1.begin(BUTTON1_PIN,INPUT);
+    button2.begin(BUTTON2_PIN,INPUT);
+    button3.begin(BUTTON3_PIN,INPUT);
+    button4.begin(BUTTON4_PIN,INPUT);
 
     button1.setLongClickTime(500);
     button2.setLongClickTime(500);

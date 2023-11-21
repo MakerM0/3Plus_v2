@@ -2,63 +2,112 @@
 #include "board_def.h"
 #include "app/app_key.h"
 
-static void init(void *data)
-{
- 
-	// bleKeyboard.begin();
-}
 
-static void enter(void *data)
+
+typedef struct 
 {
-	// insert code
+	 const char *title;
+	 const char *imgpath;
+	 uint8_t key[5];
+	 uint8_t key_num;
+}shortcut_t;
+
+
+
+shortcut_t sc[]=
+{
+	{"copy", "/shortcut/copy_48px.png",{KEY_LEFT_CTRL,'c'},2},
+	{"cut", "/shortcut/cut_48px.png",{KEY_LEFT_CTRL,'x'},2},
+	{"paste", "/shortcut/paste_48px.png",{KEY_LEFT_CTRL,'v'},2},
+	{"select all", "/shortcut/select_all_48px.png",{KEY_LEFT_CTRL,'a'},2},
+	{"F5", NULL,{KEY_F5},1},
+	{"F6", NULL,{KEY_F5},1},
+
+
+};
+
+static const uint8_t maxsc = sizeof(sc) / sizeof(shortcut_t); 
+
+static int8_t pageindex;
+static int8_t index_num;
+
+
+static void dispShortcut()
+{
 	int16_t x1;
 	int16_t y1;
 	uint16_t w;
 	uint16_t h;
 
+
 	gfx1->fillScreen(BLACK);
 	gfx2->fillScreen(BLACK);
 	gfx3->fillScreen(BLACK);
 
-	myDrawPNG(24, 0, "/shortcut/select_all_48px.png", 0);
-	myDrawPNG(24, 0, "/shortcut/copy_48px.png", 1);
-	myDrawPNG(24, 0, "/shortcut/paste_48px.png", 2);
+
+	for(uint8_t i=0;i<3;i++)
+	{
+		if ((pageindex * 3 + i) < maxsc)
+		{
+			if (sc[pageindex * 3 + i].imgpath!=NULL)
+			{
+				myDrawPNG(40, 0+30, sc[pageindex * 3 + i].imgpath, i);
+				gfx[i]->setTextSize(1);
+				gfx[i]->setTextColor(GREEN>>1);
+				// gfx[0]->setFont(u8g2_font_10x20_mr); 	
+				gfx[i]->setFont(&Orbitron_Medium_12);
+				gfx[i]->getTextBounds(sc[pageindex * 3 + i].title, 0, 0, &x1, &y1, &w, &h);	
+				gfx[i]->setCursor((OLED_WIDTH - w) / 2, 63+30);
+				gfx[i]->print(sc[pageindex * 3 + i].title);
+			}
+			else
+			{
+				gfx[i]->setTextSize(3);
+				gfx[i]->setTextColor(GREEN);
+				// gfx[0]->setFont(u8g2_font_10x20_mr); 	
+				gfx[i]->setFont(&Orbitron_Medium_12);
+				gfx[i]->getTextBounds(sc[pageindex * 3 + i].title, 0, 0, &x1, &y1, &w, &h);	
+				gfx[i]->setCursor((OLED_WIDTH - w) / 2, (OLED_HEIGHT - h) / 2-y1);
+				gfx[i]->print(sc[pageindex * 3 + i].title);
 
 
-	gfx[0]->setTextColor(BLUE>>1);
-	// gfx[0]->setFont(u8g2_font_10x20_mr); 	
-	gfx[0]->setFont(&Orbitron_Medium_12);
-	gfx[0]->getTextBounds("SelectAll", 0, 0, &x1, &y1, &w, &h);	
-	gfx[0]->setCursor((OLED_WIDTH - w) / 2, 63);
-	gfx[0]->print("SelectAll");
+				Serial.printf("%d %d %d %d\r\n",x1, y1, w, h);
+			}
 
-	gfx[1]->setTextColor(BLUE>>1);
-	// gfx[1]->setFont(u8g2_font_10x20_mr); 	
-	gfx[1]->setFont(&Orbitron_Medium_12);
-	gfx[1]->getTextBounds("Copy", 0, 0, &x1, &y1, &w, &h);	
-	gfx[1]->setCursor((OLED_WIDTH - w) / 2, 63);
-	gfx[1]->print("Copy");
-
-
-	gfx[2]->setTextColor(BLUE>>1);
-	// gfx[2]->setFont(u8g2_font_10x20_mr); 	
-	gfx[2]->setFont(&Orbitron_Medium_12);
-	gfx[2]->getTextBounds("Paste", 0, 0, &x1, &y1, &w, &h);	
-	gfx[2]->setCursor((OLED_WIDTH - w) / 2, 63);
-	gfx[2]->print("Paste");
-
-
-	// while (bleKeyboard.isConnected() == false)
-	// {
-	// 	delay(20);
-	// }
+		}
+	}
  
 
-	
-	// gfx[0]->setFont(u8g2_font_4x6_mr);
-	// gfx[0]->drawChar(0, 6, 'B', BLUE, BLACK);
+ 
+}
 
-	//
+
+static void sendkey(uint8_t *key,uint8_t num)
+{
+	if (bleKeyboard.isConnected())
+	{	
+		for(uint8_t i=0;i<num;i++)
+		{
+			bleKeyboard.press(key[i]);
+		}
+
+		bleKeyboard.releaseAll();
+	}
+}
+
+
+static void init(void *data)
+{
+ 
+	pageindex = 0;
+	index_num = (maxsc % 3 == 0) ? (maxsc / 3) : (maxsc / 3 + 1);
+
+	Serial.println(sizeof(maxsc));
+}
+
+static void enter(void *data)
+{
+	dispShortcut();
 	manager_setBusy(false);
 }
 
@@ -72,36 +121,41 @@ static void loop(void *data)
 	case KEY1_DOWN:
 		if (bleKeyboard.isConnected())
 		{
-
-			bleKeyboard.press(KEY_LEFT_CTRL);
-			bleKeyboard.press('a');
-			bleKeyboard.release('a');
-            bleKeyboard.release(KEY_LEFT_CTRL);
-			 
-
+			if (pageindex * 3 < maxsc)
+				sendkey(sc[pageindex * 3].key,sc[pageindex * 3].key_num);
 		}
 		break;
+
 	case KEY2_DOWN:
 		if (bleKeyboard.isConnected())
 		{
-
-			bleKeyboard.press(KEY_LEFT_CTRL);
-			bleKeyboard.press('c');
-			bleKeyboard.release('c');
-            bleKeyboard.release(KEY_LEFT_CTRL);
-
+			if ((pageindex * 3 + 1) < maxsc)
+				sendkey(sc[pageindex * 3 + 1].key,sc[pageindex * 3+1].key_num);
 		}
 		break;
 	case KEY3_DOWN:
 		if (bleKeyboard.isConnected())
 		{
-
-			bleKeyboard.press(KEY_LEFT_CTRL);
-			bleKeyboard.press('v');
-			bleKeyboard.release('v');
-            bleKeyboard.release(KEY_LEFT_CTRL);
-
+			if ((pageindex * 3 + 2) < maxsc)
+				sendkey(sc[pageindex * 3 + 2].key,sc[pageindex * 3+2].key_num);
 		}
+		break;
+	case ENC_NEXT:
+		pageindex++;
+		if (pageindex >= index_num)
+		{
+			pageindex = 0;
+		}
+		dispShortcut();
+
+		break;
+	case ENC_PREV:
+		pageindex--;
+		if (pageindex < 0)
+		{
+			pageindex = index_num - 1;
+		}
+		dispShortcut();
 		break;
 
 	 

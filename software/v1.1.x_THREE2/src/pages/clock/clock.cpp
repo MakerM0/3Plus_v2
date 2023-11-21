@@ -1,6 +1,7 @@
 #include "clock.h"
 #include "board_def.h"
 #include "app/app_key.h"
+#include "app/app_audio.h"
 const char *number_name[] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
 // char *clock_name[] = {"matrix", "nixie", "vfd", "digital", "14seg", "bina", "flip", "ink", "purple", "cyan", "nimo", "wood", "pixiepro", "predator", "rgb", "dhf"};
 
@@ -325,7 +326,8 @@ static void enter(void *data)
 	gfx2->fillScreen(BLACK);
 	gfx3->fillScreen(BLACK);
 	//
-	manager_setBusy(false);
+	manager_setBusy(false); 
+
 }
 uint32_t t_old, t_now = 0;
 uint8_t hour, minute, second = 0;
@@ -349,6 +351,11 @@ static void loop(void *data)
 				dispTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
 			}
 
+			if (timeInfo.tm_min==0 && timeInfo.tm_sec==0  && timeInfo.tm_hour>7 &&timeInfo.tm_hour<23)
+			{
+				app_audio_sayTimeCN(timeInfo.tm_hour, timeInfo.tm_min);
+			}
+
 			// Serial.printf("%02d:%02d:%02d\r\n", timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
 		}
 	}
@@ -357,8 +364,11 @@ static void loop(void *data)
 	switch (key)
 	{
 
-	case KEY1_DOWN:
-
+	case KEY1_SHORT:
+	case KEY2_SHORT:
+	// case KEY3_SHORT:
+		getLocalTime(&timeInfo);
+		app_audio_sayTimeCN(timeInfo.tm_hour, timeInfo.tm_min);
 		break;
 
 	case KEY4_LONG:				  //长按
