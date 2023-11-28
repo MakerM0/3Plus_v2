@@ -7,8 +7,6 @@ a macro keyboard
 
 ![015](documents/images/015.png)
 
-![011](documents/images/011.png)
-
 ![012](documents/images/012.png)
 
 ![007](documents/images/007.jpg)
