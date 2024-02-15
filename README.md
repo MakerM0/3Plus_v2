@@ -19,6 +19,12 @@ a macro keyboard
 
 ![5](documents/images/5.png)
 
+
+
+
+
+
+
 ## License
 
 (documents/hardware/mechanical)[Creative Commons — Attribution-NonCommercial-ShareAlike 4.0 International — CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
