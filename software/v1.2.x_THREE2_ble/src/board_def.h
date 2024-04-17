@@ -31,7 +31,7 @@
 
 
 #define VER_HW "3Plus_2.5"
-#define VER_SW "1.2.1"
+#define VER_SW "1.2.3"
 
 #define NTP1 "ntp1.aliyun.com"
 #define NTP2 "ntp2.aliyun.com"
@@ -59,8 +59,8 @@ extern struct tm timeInfo;
 
 extern Button2 button1, button2, button3, button4;
 extern Encoder myEnc;
-
-
+extern char stored_rotary[];
+extern int rotary_factor;
 
 
 

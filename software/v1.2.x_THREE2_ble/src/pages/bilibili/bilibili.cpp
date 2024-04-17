@@ -7,7 +7,6 @@
 #include "danmu.h"
 #include "quanping.h"
 
-
 /*
 		按下F，就可以进入全屏模式，再按下F就可以退出全屏模式
 		按下Q，可以为视频点赞。
@@ -19,7 +18,7 @@
 */
 
 static const char *key[] = {"Q", "W", "E", "F", "M", "D"};
-
+static const int16_t xpos = 40, ypos = 40;
 static void init(void *data)
 {
 }
@@ -36,13 +35,10 @@ static void enter(void *data)
 	gfx2->fillScreen(BLACK);
 	gfx3->fillScreen(BLACK);
 
- 
-	gfx[0]->drawXBitmap(24, 0, yijiansanlian_bits,yijiansanlian_width, yijiansanlian_height, random(0xffff));
-	gfx[1]->drawXBitmap(24, 0, danmu_bits,danmu_width, danmu_height, random(0xffff));
-	gfx[2]->drawXBitmap(24, 0, quanping_bits,quanping_width, quanping_height, random(0xffff));
+	gfx[0]->drawXBitmap(xpos, ypos, yijiansanlian_bits, yijiansanlian_width, yijiansanlian_height, random(0xffff));
+	gfx[1]->drawXBitmap(xpos, ypos, danmu_bits, danmu_width, danmu_height, random(0xffff));
+	gfx[2]->drawXBitmap(xpos, ypos, quanping_bits, quanping_width, quanping_height, random(0xffff));
 
-
- 
 	//
 	manager_setBusy(false);
 }
@@ -55,46 +51,46 @@ static void loop(void *data)
 	{
 
 	case KEY1_DOWN:
-	app_led_set(LED1, app_led_color(random(10,255), random(10,255), random(10,255)));app_led_update();
+		app_led_set(LED1, app_led_color(random(10, 255), random(10, 255), random(10, 255)));
+		app_led_update();
 		if (bleKeyboard.isConnected())
 		{
 			// bleKeyboard.releaseAll();
 			// bleKeyboard.release(KEY_LEFT_SHIFT);
 			uint16_t color = random(0xffff);
 			bleKeyboard.press('q');
-			gfx[0]->drawRoundRect(21,50,54,10,3,color<<1);
-			gfx[0]->fillRoundRect(24,52,50,6,2,BLACK);
-			int x=50;
-			while(x)
+			gfx[0]->drawRoundRect(xpos - 3, 50 + ypos, 54, 10, 3, color << 1);
+			gfx[0]->fillRoundRect(xpos, 52 + ypos, 50, 6, 2, BLACK);
+			int x = 50;
+			while (x)
 			{
-				gfx[0]->drawXBitmap(24, 0, yijiansanlian_bits,yijiansanlian_width, yijiansanlian_height,color );
-				gfx[0]->drawRoundRect(21,50,54,10,3,color<<1);
-				gfx[0]->fillRoundRect(24,52,50-x,6,2,color);
-
+				gfx[0]->drawXBitmap(xpos, ypos, yijiansanlian_bits, yijiansanlian_width, yijiansanlian_height, color);
+				gfx[0]->drawRoundRect(xpos - 3, 50 + ypos, 54, 10, 3, color << 1);
+				gfx[0]->fillRoundRect(xpos, 52 + ypos, 50 - x, 6, 2, color);
 
 				delay(40);
 				x--;
 			}
 			// delay(2000);
 			bleKeyboard.release('q');
-			
 		}
 		break;
 	case KEY2_DOWN:
-	app_led_set(LED2, app_led_color(random(10,255), random(10,255), random(10,255)));app_led_update();
+		app_led_set(LED2, app_led_color(random(10, 255), random(10, 255), random(10, 255)));
+		app_led_update();
 		if (bleKeyboard.isConnected())
 		{
 
 			// bleKeyboard.releaseAll();
 			// bleKeyboard.release(KEY_LEFT_SHIFT);
-			
+
 			bleKeyboard.write('d');
-			gfx[1]->drawXBitmap(24, 0, danmu_bits,danmu_width, danmu_height, random(0xffff));
-	
+			gfx[1]->drawXBitmap(xpos, ypos, danmu_bits, danmu_width, danmu_height, random(0xffff));
 		}
 		break;
 	case KEY3_DOWN:
-	app_led_set(LED3, app_led_color(random(10,255), random(10,255), random(10,255)));app_led_update();
+		app_led_set(LED3, app_led_color(random(10, 255), random(10, 255), random(10, 255)));
+		app_led_update();
 		if (bleKeyboard.isConnected())
 		{
 			// bleKeyboard.releaseAll();
@@ -102,7 +98,7 @@ static void loop(void *data)
 			// bleKeyboard.release(KEY_LEFT_SHIFT);
 
 			bleKeyboard.write('f');
-			gfx[2]->drawXBitmap(24, 0, quanping_bits,quanping_width, quanping_height, random(0xffff));
+			gfx[2]->drawXBitmap(xpos, ypos, quanping_bits, quanping_width, quanping_height, random(0xffff));
 		}
 		break;
 
@@ -112,8 +108,8 @@ static void loop(void *data)
 		app_led_off();
 		break;
 
-	case KEY4_LONG:				  //长按
-		manager_switchToParent(); //进入父项目 //退出
+	case KEY4_LONG:				  // 长按
+		manager_switchToParent(); // 进入父项目 //退出
 		break;
 	default:
 		break;

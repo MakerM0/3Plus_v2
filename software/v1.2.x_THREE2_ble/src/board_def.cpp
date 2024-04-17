@@ -1,10 +1,8 @@
 #include "board_def.h"
 
-
-
-
-
 WiFiManager wm;
+
+
 
 #include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
@@ -12,8 +10,21 @@ AsyncWebServer server(80);
 
 char stored_weather_key[40];
 char stored_weather_city[40];
+int rotary_factor=2;
+char stored_rotary[10]; // 旋转编码器配置，默认2
 
- 
+class IntParameter : public WiFiManagerParameter {
+public:
+    IntParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10)
+        : WiFiManagerParameter("") {
+        init(id, placeholder, String(value).c_str(), length, "", WFM_LABEL_BEFORE);
+    }
+
+    long getValue() {
+        return String(WiFiManagerParameter::getValue()).toInt();
+    }
+};
+
 BleKeyboard bleKeyboard(VER_HW, "M0dular", 100);
 
 // flag for saving data
@@ -51,21 +62,23 @@ int cs3 = PIN_CS3;
 Arduino_DataBus *bus1 = new Arduino_ESP32SPI(dc /*dc*/, cs1 /*cs*/, sclk /*sclk*/, mosi /*mosi*/);
 // Arduino_DataBus *bus1 = new Arduino_SWSPI(dc /*dc*/, cs1 /*cs*/, sclk /*sclk*/, mosi /*mosi*/,GFX_NOT_DEFINED /*miso*/);
 /* More display class: https://github.com/moononournation/Arduino_GFX/wiki/Display-Class */
-Arduino_GFX *gfx1 = new Arduino_NV3023(bus1, -1, 2 /* rotation */,false,128,128);
+Arduino_GFX *gfx1 = new Arduino_NV3023(bus1, -1, 2 /* rotation */, false, 128, 128);
 
 /* More data bus class: https://github.com/moononournation/Arduino_GFX/wiki/Data-Bus-Class */
 Arduino_DataBus *bus2 = new Arduino_ESP32SPI(dc /*dc*/, cs2 /*cs*/, sclk /*sclk*/, mosi /*mosi*/);
 // Arduino_DataBus *bus2 = new Arduino_SWSPI(dc /*dc*/, cs2 /*cs*/, sclk /*sclk*/, mosi /*mosi*/,GFX_NOT_DEFINED /*miso*/);
 
 /* More display class: https://github.com/moononournation/Arduino_GFX/wiki/Display-Class */
-Arduino_GFX *gfx2 = new Arduino_NV3023(bus2, -1, 2 /* rotation */,false,128,128);
+Arduino_GFX *gfx2 = new Arduino_NV3023(bus2, -1, 2 /* rotation */, false, 128, 128);
 
 /* More data bus class: https://github.com/moononournation/Arduino_GFX/wiki/Data-Bus-Class */
 Arduino_DataBus *bus3 = new Arduino_ESP32SPI(dc /*dc*/, cs3 /*cs*/, sclk /*sclk*/, mosi /*mosi*/);
 // Arduino_DataBus *bus3 = new Arduino_SWSPI(dc /*dc*/, cs3 /*cs*/, sclk /*sclk*/, mosi /*mosi*/,GFX_NOT_DEFINED /*miso*/);
 
 /* More display class: https://github.com/moononournation/Arduino_GFX/wiki/Display-Class */
-Arduino_GFX *gfx3 = new Arduino_NV3023(bus3, -1, 2 /* rotation */,false,128,128);
+Arduino_GFX *gfx3 = new Arduino_NV3023(bus3, -1, 2 /* rotation */, false, 128, 128);
+
+// Arduino_Canvas_Indexed *canvasGfx1 = new Arduino_Canvas_Indexed(64 /* width */, 128 /* height */, gfx1);
 
 /*******************************************************************************
  * End of Arduino_GFX setting
@@ -129,7 +142,7 @@ void PNGDraw1(PNGDRAW *pDraw)
     // Serial.printf("Draw pos = 0,%d. size = %d x 1\n", pDraw->y, pDraw->iWidth);
     png.getLineAsRGB565(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x00000000);
     png.getAlphaMask(pDraw, usMask, 1);
-    gfx1->draw16bitRGBBitmap(xOffset, yOffset + pDraw->y, usPixels,  pDraw->iWidth, 1);
+    gfx1->draw16bitRGBBitmap(xOffset, yOffset + pDraw->y, usPixels, pDraw->iWidth, 1);
 }
 
 void PNGDraw2(PNGDRAW *pDraw)
@@ -140,7 +153,7 @@ void PNGDraw2(PNGDRAW *pDraw)
     // Serial.printf("Draw pos = 0,%d. size = %d x 1\n", pDraw->y, pDraw->iWidth);
     png.getLineAsRGB565(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x00000000);
     png.getAlphaMask(pDraw, usMask, 1);
-    gfx2->draw16bitRGBBitmap(xOffset, yOffset + pDraw->y, usPixels,  pDraw->iWidth, 1);
+    gfx2->draw16bitRGBBitmap(xOffset, yOffset + pDraw->y, usPixels, pDraw->iWidth, 1);
 }
 
 void PNGDraw3(PNGDRAW *pDraw)
@@ -151,7 +164,7 @@ void PNGDraw3(PNGDRAW *pDraw)
     // Serial.printf("Draw pos = 0,%d. size = %d x 1\n", pDraw->y, pDraw->iWidth);
     png.getLineAsRGB565(pDraw, usPixels, PNG_RGB565_LITTLE_ENDIAN, 0x00000000);
     png.getAlphaMask(pDraw, usMask, 1);
-    gfx3->draw16bitRGBBitmap(xOffset, yOffset + pDraw->y, usPixels,  pDraw->iWidth, 1);
+    gfx3->draw16bitRGBBitmap(xOffset, yOffset + pDraw->y, usPixels, pDraw->iWidth, 1);
 }
 
 void myDrawPNG(int16_t x, int16_t y, const char *path, uint8_t oled_index)
@@ -209,48 +222,66 @@ void configModeCallback(WiFiManager *myWiFiManager)
     gfx2->setTextColor(GREEN);
 }
 
-
 void audio_poweroff()
 {
-    pinMode(PIN_AUDIO_SD,OUTPUT);
-    digitalWrite(PIN_AUDIO_SD,LOW);
- 
+    pinMode(PIN_AUDIO_SD, OUTPUT);
+    digitalWrite(PIN_AUDIO_SD, LOW);
 }
 
 void audio_poweron()
 {
-    pinMode(PIN_AUDIO_SD,OUTPUT);
-    digitalWrite(PIN_AUDIO_SD,HIGH);
- 
+    pinMode(PIN_AUDIO_SD, OUTPUT);
+    digitalWrite(PIN_AUDIO_SD, HIGH);
 }
-
-
-
 
 unsigned long ota_progress_millis = 0;
 
-void onOTAStart() {
-  // Log when OTA has started
-  Serial.println("OTA update started!");
-  // <Add your own code here>
+void onOTAStart()
+{
+    // Log when OTA has started
+    Serial.println("OTA update started!");
+    gfx3->setCursor(40, 100);
+    gfx3->setTextSize(2);
+    gfx3->setTextColor(GREEN, BLACK);
+    gfx3->print("START   ");
+
+    // <Add your own code here>
 }
 
-void onOTAProgress(size_t current, size_t final) {
-  // Log every 1 second
-  if (millis() - ota_progress_millis > 1000) {
-    ota_progress_millis = millis();
-    Serial.printf("OTA Progress Current: %u bytes, Final: %u bytes\n", current, final);
-  }
+void onOTAProgress(size_t current, size_t final)
+{
+    // Log every 1 second
+    if (millis() - ota_progress_millis > 1000)
+    {
+        ota_progress_millis = millis();
+        Serial.printf("OTA Progress Current: %u bytes, Final: %u bytes\n", current, final);
+        gfx3->setCursor(40, 100);
+        gfx3->setTextSize(2);
+        gfx3->setTextColor(ORANGE, BLACK);
+        gfx3->printf("%03d %%   ", current * 100 / final);
+    }
 }
 
-void onOTAEnd(bool success) {
-  // Log when OTA has finished
-  if (success) {
-    Serial.println("OTA update finished successfully!");
-  } else {
-    Serial.println("There was an error during OTA update!");
-  }
-  // <Add your own code here>
+void onOTAEnd(bool success)
+{
+    // Log when OTA has finished
+    if (success)
+    {
+        Serial.println("OTA update finished successfully!");
+        gfx3->setCursor(40, 100);
+        gfx3->setTextSize(2);
+        gfx3->setTextColor(GREEN, BLACK);
+        gfx3->print("100 %   ");
+    }
+    else
+    {
+        Serial.println("There was an error during OTA update!");
+        gfx3->setCursor(40, 100);
+        gfx3->setTextSize(2);
+        gfx3->setTextColor(RED, BLACK);
+        gfx3->print("ERROR   ");
+    }
+    // <Add your own code here>
 }
 
 void board_init()
@@ -263,13 +294,10 @@ void board_init()
 
     audio_poweroff();
 
- 
-  app_led_init();
-
-
+    app_led_init();
 
     pinMode(backlight, OUTPUT);
-    digitalWrite(backlight, 0);//
+    digitalWrite(backlight, 0); //
 
     pinMode(rst, OUTPUT);
     digitalWrite(rst, 1);
@@ -278,10 +306,6 @@ void board_init()
     delay(100);
     digitalWrite(rst, 1);
     delay(100);
-
-
-    
-
 
     pinMode(BUTTON3_PIN, INPUT);
 
@@ -295,7 +319,6 @@ void board_init()
     gfx3->begin(40000000);
     gfx3->fillScreen(BLACK);
 
-    
     digitalWrite(backlight, 1);
 
     if (LittleFS.begin(true))
@@ -329,8 +352,13 @@ void board_init()
                 {
 #endif
                     Serial.println("\nparsed json");
+#if defined(SUPPORT_WEATHER)
                     strcpy(stored_weather_city, json["weather_city"]);
                     strcpy(stored_weather_key, json["weather_key"]);
+#endif
+                    // strcpy(stored_rotary, json["rotary"]);
+                    rotary_factor = json["rotary"];                  
+                    Serial.println(rotary_factor);
                 }
                 else
                 {
@@ -382,6 +410,14 @@ void board_init()
     // set config save notify callback
     wm.setSaveConfigCallback(saveConfigCallback);
 
+    // 旋转编码器
+    WiFiManagerParameter custom_text1("<H1><font color=\"blue\">旋转编码器，一般为2或者4</font></H1>");
+    wm.addParameter(&custom_text1);
+    IntParameter param_int( "int", "参数",  rotary_factor);
+    wm.addParameter( &param_int );
+
+#if defined(SUPPORT_WEATHER)
+    // 天气部分
     WiFiManagerParameter custom_text("<H1><font color=\"blue\">心知天气</font></H1>");
     wm.addParameter(&custom_text);
     WiFiManagerParameter custom_weather_city("weather_city", "城市", stored_weather_city, 40);
@@ -389,6 +425,8 @@ void board_init()
 
     wm.addParameter(&custom_weather_city);
     wm.addParameter(&custom_weather_key);
+
+#endif
 
     // wm.setSaveConfigCallback();
     // reset settings - wipe stored credentials for testing
@@ -416,7 +454,7 @@ void board_init()
         ESP.restart();
         delay(5000);
     }
-
+#if defined(SUPPORT_WEATHER)
     // read updated parameters
     strcpy(stored_weather_city, custom_weather_city.getValue());
     strcpy(stored_weather_key, custom_weather_key.getValue());
@@ -424,6 +462,13 @@ void board_init()
     Serial.println("The values in the file are: ");
     Serial.println("\tweather_city : " + String(stored_weather_city));
     Serial.println("\tweather_key: " + String(stored_weather_key));
+#endif
+
+    
+    rotary_factor = param_int.getValue();
+    Serial.println(rotary_factor);
+
+    // stored_rotary[0] = String(stored_rotary).toInt();
 
     // save the custom parameters to FS
     if (shouldSaveConfig)
@@ -435,8 +480,12 @@ void board_init()
         DynamicJsonBuffer jsonBuffer;
         JsonObject &json = jsonBuffer.createObject();
 #endif
+#if defined(SUPPORT_WEATHER)
         json["weather_city"] = stored_weather_city;
         json["weather_key"] = stored_weather_key;
+#endif
+        json["rotary"] = rotary_factor;
+        // stored_rotary[0] = String(stored_rotary).toInt();
 
         File configFile = LittleFS.open("/config.json", "w");
         if (!configFile)
@@ -458,7 +507,10 @@ void board_init()
     gfx2->println("WiFi Connected ");
     gfx2->println("IP address: ");
     gfx2->setTextColor(GREENYELLOW);
+    gfx2->setTextSize(2);
+    gfx2->setCursor(0, 40);
     gfx2->println(WiFi.localIP()); // 显示连接WIFI后的IP地址
+    gfx2->setTextSize(1);
     gfx2->setTextColor(GREEN);
     gfx2->print("RSSI: ");      // 显示连接WIFI后的IP地址
     gfx2->println(WiFi.RSSI()); // 显示连接WIFI后的IP地址
@@ -468,16 +520,18 @@ void board_init()
         gfx3->setCursor(0, 14);
         gfx3->setTextSize(2);
         gfx3->println("OTA"); //
-        gfx3->setTextSize(1);
+        gfx3->println();      //
+        gfx3->setTextColor(GREENYELLOW);
+        gfx3->setTextSize(2);
         gfx3->print("http://");      // ota地址    http://<IPAddress>/update
         gfx3->print(WiFi.localIP()); // ota地址
         gfx3->println("/update");    // ota地址
-
+        gfx3->setTextSize(1);
         server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                   { request->send(200, "text/plain", "http://<IPAddress>/update"); });
 
         ElegantOTA.begin(&server); // Start ElegantOTA
-          // ElegantOTA callbacks
+                                   // ElegantOTA callbacks
         ElegantOTA.onStart(onOTAStart);
         ElegantOTA.onProgress(onOTAProgress);
         ElegantOTA.onEnd(onOTAEnd);

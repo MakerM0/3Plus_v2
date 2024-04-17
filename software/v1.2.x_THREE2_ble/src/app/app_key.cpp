@@ -187,7 +187,7 @@ static void key_timer_callback(TimerHandle_t xTimerID)
     button3.loop();
     button4.loop();
 
-    long newPosition = myEnc.read() / 4;
+    long newPosition = myEnc.read() / rotary_factor;
     if (newPosition != oldPosition)
     {
         if (newPosition < oldPosition)
